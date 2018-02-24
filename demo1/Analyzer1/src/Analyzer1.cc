@@ -28,7 +28,8 @@
 #include "DataFormats/HLTReco/interface/TriggerObject.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
-
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "FWCore/Common/interface/TriggerNames.h"
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
@@ -66,7 +67,7 @@ class Analyzer1 : public edm::EDAnalyzer {
       
      TFile * file;
      TH1F * histo; 
-     int matchCount, matchCountRep,  filterCount; // How many matches in total, how many objects passed the filter 
+     int matchCount, matchCountRep,  filterCount, triggerCount; // How many matches in total, how many objects passed the filter 
       
       
 
@@ -114,9 +115,27 @@ Analyzer1::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
    
+// Trigger activiation count
+
+edm::Handle<edm::TriggerResults> trigResults; //our trigger result object
+edm::InputTag trigResultsTag("TriggerResults","","HLT"); //make sure have correct process on MC
+//data process=HLT, MC depends, Spring11 is REDIGI311X
+iEvent.getByLabel(trigResultsTag,trigResults);
+const edm::TriggerNames& trigNames = iEvent.triggerNames(*trigResults);   
+
+std::string pathName="HLT_DoublePhoton33_v2";
+
+bool passTrig=trigResults->accept(trigNames.triggerIndex(pathName)); 
+
+if (passTrig)
+{triggerCount ++;}
+  
    
-   
-   
+
+
+
+
+// *** Trigger Matching   
 InputTag trigEventTag("hltTriggerSummaryAOD","","HLT"); //make sure have correct process on MC
 //data process=HLT, MC depends, Spring11 is REDIGI311X
 Handle<trigger::TriggerEvent> trigEvent; 
@@ -196,6 +215,7 @@ Analyzer1::beginJob()
 	matchCount=0;
 	matchCountRep=0;
 	filterCount=0;
+	triggerCount=0;
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
