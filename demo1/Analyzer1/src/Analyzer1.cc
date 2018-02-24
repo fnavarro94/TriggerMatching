@@ -67,7 +67,7 @@ class Analyzer1 : public edm::EDAnalyzer {
       
      TFile * file;
      TH1F * histo; 
-     int matchCount, matchCountRep,  filterCount, triggerCount; // How many matches in total, how many objects passed the filter 
+     int matchCount, matchCountRep,  filterCount, triggerCount, filterCount2; // How many matches in total, how many objects passed the filter 
       
       
 
@@ -141,11 +141,15 @@ InputTag trigEventTag("hltTriggerSummaryAOD","","HLT"); //make sure have correct
 Handle<trigger::TriggerEvent> trigEvent; 
 iEvent.getByLabel(trigEventTag,trigEvent);
 
+
+
 std::string filterName("hltDoublePhoton33EgammaLHEDoubleFilter"); 
+//std::string filterName("hltDoublePhoton33EgammaR9ShapeDoubleFilter"); 
 
 //it is important to specify the right HLT process for the filter, not doing this is a common bug
 trigger::size_type filterIndex = trigEvent->filterIndex(edm::InputTag(filterName,"",trigEventTag.process())); 
 bool primeraVuelta = true;
+if(passTrig){
 if(filterIndex<trigEvent->sizeFilters()){ 
     const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
     const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
@@ -166,7 +170,7 @@ if(filterIndex<trigEvent->sizeFilters()){
     
     // Trigger object loop starts
 		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
-			if (primeraVuelta){filterCount ++;}
+			if (primeraVuelta && keyIt == trigKeys.begin()){filterCount ++;}
 			const trigger::TriggerObject& obj = trigObjColl[*keyIt];
 			double dEta2 =pow( itTrack->eta()-obj.eta(),2); 
 			double dPhi2 =pow( itTrack->phi()-obj.phi(),2);
@@ -183,12 +187,28 @@ if(filterIndex<trigEvent->sizeFilters()){
 primeraVuelta = false;
 }//end filter size check
       
-      
+  }
       
       
       
       
    }
+   
+ int a = 0;
+if(filterIndex<trigEvent->sizeFilters()){ 
+    const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
+    const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
+    //now loop of the trigger objects passing filter
+    for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
+      const trigger::TriggerObject& obj = trigObjColl[*keyIt];
+      //do what you want with the trigger objects, you have
+      //eta,phi,pt,mass,p,px,py,pz,et,energy accessors
+      if(obj.pt() < 9999999){}
+      if(a==0){a = 1;
+		  filterCount2 ++;   }
+    }
+    
+}//end filter size check
 
 #ifdef THIS_IS_AN_EVENT_EXAMPLE
    Handle<ExampleData> pIn;
@@ -216,6 +236,7 @@ Analyzer1::beginJob()
 	matchCountRep=0;
 	filterCount=0;
 	triggerCount=0;
+	filterCount2=0;
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -225,7 +246,8 @@ Analyzer1::endJob()
 	std::cout<<"Number of objects passing filter: "<<filterCount<<std::endl;
 	std::cout<<"Number of matches: "<<matchCount<<std::endl;
 	std::cout<<"Number of matches with rep: "<<matchCountRep<<std::endl;
-	std::cout<<"Number of times trigger was activated"<<triggerCount<<std::endl;
+	std::cout<<"Number of times trigger was activated "<<triggerCount<<std::endl;
+	std::cout<<"this should be the same number as above "<<filterCount2<<std::endl;
 	std::cout<<"Triger efficiency (with respecto to matching)"<<(float)matchCount/triggerCount<<std::endl;
     file->Write();
     file->Close(); 
