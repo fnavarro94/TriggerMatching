@@ -224,7 +224,9 @@ Analyzer1::endJob()
 {
 	std::cout<<"Number of objects passing filter: "<<filterCount<<std::endl;
 	std::cout<<"Number of matches: "<<matchCount<<std::endl;
-	std::cout<<"Number of matches with rep: "<<matchCount<<std::endl;
+	std::cout<<"Number of matches with rep: "<<matchCountRep<<std::endl;
+	std::cout<<"Number of times trigger was activated"<<triggerCount<<std::endl;
+	std::cout<<"Triger efficiency (with respecto to matching)"<<(float)matchCount/triggerCount<<std::endl;
     file->Write();
     file->Close(); 
 }
