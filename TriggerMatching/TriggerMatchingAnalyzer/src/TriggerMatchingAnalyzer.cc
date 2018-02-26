@@ -69,7 +69,7 @@ class TriggerMatchingAnalyzer : public edm::EDAnalyzer {
       
      TFile * file;
      TH1F * histo; 
-     int  triggerCount, muonCount, correctMatches; // How many matches in total, how many objects passed the filter 
+     int  triggerCount, muonCount, correctActivations; // How many matches in total, how many objects passed the filter 
       
       
 
@@ -140,11 +140,6 @@ bool passTrig=trigResults->accept(trigNames.triggerIndex(pathName));
 if (passTrig)
 {triggerCount ++;}
   
-   
-
-
-
-
 // *** Trigger Matching   
 InputTag trigEventTag("hltTriggerSummaryAOD","","HLT"); 
 Handle<trigger::TriggerEvent> trigEvent; 
@@ -153,51 +148,38 @@ iEvent.getByLabel(trigEventTag,trigEvent);
 Handle<GenParticleCollection> genParticles;
 iEvent.getByLabel("genParticles", genParticles);
    
-//std::string filterName("hltDoublePhoton33EgammaLHEDoubleFilter"); // data
-std::string filterName("hltL2DoubleMu30NoVertexL2PreFiltered"); // simulation 
-
-//it is important to specify the right HLT process for the filter, not doing this is a common bug
+std::string filterName("hltL2DoubleMu30NoVertexL2PreFiltered"); // Filter corresponding to trigger HLT_L2DoubleMu30_NoVertex_v5
 trigger::size_type filterIndex = trigEvent->filterIndex(edm::InputTag(filterName,"",trigEventTag.process())); 
 
 int match=0; 
-if(passTrig){
-if(filterIndex<trigEvent->sizeFilters()){ 
-    const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
-    const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
-   
-
-  using reco::TrackCollection;
-
-   
+if(passTrig)
+{ // 
+    if(filterIndex<trigEvent->sizeFilters())
+    { 
+        const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
+        const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
+        using reco::TrackCollection;
     
-  for(size_t i = 0; i < genParticles->size(); ++ i) {
-     const GenParticle & p = (*genParticles)[i];
+        for(size_t i = 0; i < genParticles->size(); ++ i) 
+        {
+            const GenParticle & p = (*genParticles)[i];
      
-    // Trigger object loop starts
-		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
-			
-			const trigger::TriggerObject& obj = trigObjColl[*keyIt];
-			
-			if((dR(obj,p)<0.1)){
-				
-				if(abs(p.pdgId())== 13)
-				{
-				 match++;	 }
-				
-		}
-    }
-
-
-}//end filter size check
-      
-  }
-  
-      
-      
-      
-      
-   }
-   if (match >= 2){correctMatches ++;}
+            // Trigger object loop starts
+		    for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt)
+		    { 
+			    const trigger::TriggerObject& obj = trigObjColl[*keyIt];
+			    if((dR(obj,p)<0.1))
+			    {
+			        if(abs(p.pdgId())== 13)
+				    {
+					    match++;
+				    }	
+		        }
+            }
+         }   
+     }
+}
+if (match >= 2){correctActivations ++;} // if at least two muons passed the filter add a count to correct activations
    
 
 
@@ -227,7 +209,7 @@ TriggerMatchingAnalyzer::beginJob()
     TH1::AddDirectory(oldAddDir); 
 	triggerCount=0; // Counts the number of times the trigger was activated
 	muonCount = 0;  // Counts the number of events that should activate the trigger
-	correctMatches = 0; // Counts the nuber of times the trigger was activated by the correct object
+	correctActivations = 0; // Counts the nuber of times the trigger was activated by the correct object
 	
 }
 
@@ -237,9 +219,9 @@ TriggerMatchingAnalyzer::endJob()
 {
 	 std::cout<<"Number of events that should activate trigger "<<muonCount<<std::endl;
 	std::cout<<"Number of times trigger was activated "<<triggerCount<<std::endl;
-	std::cout<<"Number of correct activations "  <<correctMatches<<std::endl;
+	std::cout<<"Number of correct activations "  <<correctActivations<<std::endl;
 	std::cout<<"Trigger efficiency 1 (times it was activated/times it should have been activated)"<< (float)triggerCount/muonCount<<std::endl;
-	std::cout<<"Trigger efficiency 2 (times it was activated / times it was activated by two muons)"<< (float)triggerCount/correctMatches<<std::endl;
+	std::cout<<"Trigger efficiency 2 (times it was activated / times it was activated by two muons)"<< (float)triggerCount/correctActivations<<std::endl;
 	
 	
 	
