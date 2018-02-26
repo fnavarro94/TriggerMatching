@@ -69,7 +69,7 @@ class TriggerMatchingAnalyzer : public edm::EDAnalyzer {
       
      TFile * file;
      TH1F * histo; 
-     int matchCount, matchCountRep,  filterCount, triggerCount, filterCount2, muonCount, correctMatches, muonMatches; // How many matches in total, how many objects passed the filter 
+     int  triggerCount, muonCount, correctMatches; // How many matches in total, how many objects passed the filter 
       
       
 
@@ -158,7 +158,7 @@ std::string filterName("hltL2DoubleMu30NoVertexL2PreFiltered"); // simulation
 
 //it is important to specify the right HLT process for the filter, not doing this is a common bug
 trigger::size_type filterIndex = trigEvent->filterIndex(edm::InputTag(filterName,"",trigEventTag.process())); 
-bool primeraVuelta = true;
+
 int match=0; 
 if(passTrig){
 if(filterIndex<trigEvent->sizeFilters()){ 
@@ -175,18 +175,18 @@ if(filterIndex<trigEvent->sizeFilters()){
      
     // Trigger object loop starts
 		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
-			if (primeraVuelta && keyIt == trigKeys.begin()){filterCount ++;}
+			
 			const trigger::TriggerObject& obj = trigObjColl[*keyIt];
 			
 			if((dR(obj,p)<0.1)){
-				matchCount++;
+				
 				if(abs(p.pdgId())== 13)
-				{muonMatches++;
+				{
 				 match++;	 }
 				
 		}
     }
-primeraVuelta = false;
+
 
 }//end filter size check
       
@@ -225,14 +225,10 @@ TriggerMatchingAnalyzer::beginJob()
     TH1::AddDirectory(true);
     histo = new TH1F("pt","pt",1000,0,100);
     TH1::AddDirectory(oldAddDir); 
-	matchCount=0;
-	matchCountRep=0;
-	filterCount=0;
-	triggerCount=0;
-	filterCount2=0;
-	muonCount = 0;
-	correctMatches = 0;
-	muonMatches=0;
+	triggerCount=0; // Counts the number of times the trigger was activated
+	muonCount = 0;  // Counts the number of events that should activate the trigger
+	correctMatches = 0; // Counts the nuber of times the trigger was activated by the correct object
+	
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
