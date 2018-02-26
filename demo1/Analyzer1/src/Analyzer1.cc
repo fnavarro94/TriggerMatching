@@ -63,12 +63,12 @@ class Analyzer1 : public edm::EDAnalyzer {
       virtual void endRun(edm::Run const&, edm::EventSetup const&);
       virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
       virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
-      
+      int countMuons(const edm::Event&, const edm::EventSetup&);
       // Add a Root TFiel and a Histogram
       
      TFile * file;
      TH1F * histo; 
-     int matchCount, matchCountRep,  filterCount, triggerCount, filterCount2; // How many matches in total, how many objects passed the filter 
+     int matchCount, matchCountRep,  filterCount, triggerCount, filterCount2, muonCount, correctMatches, muonMatches; // How many matches in total, how many objects passed the filter 
       
       
 
@@ -117,6 +117,10 @@ Analyzer1::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    using namespace edm;
    using namespace reco;
    
+   
+   
+ muonCount = muonCount + countMuons(iEvent, iSetup);  
+   
 // Trigger activiation count
 
 edm::Handle<edm::TriggerResults> trigResults; //our trigger result object
@@ -156,6 +160,7 @@ std::string filterName("hltL2DoubleMu30NoVertexL2PreFiltered"); // simulation
 //it is important to specify the right HLT process for the filter, not doing this is a common bug
 trigger::size_type filterIndex = trigEvent->filterIndex(edm::InputTag(filterName,"",trigEventTag.process())); 
 bool primeraVuelta = true;
+int match=0; 
 if(true){
 if(filterIndex<trigEvent->sizeFilters()){ 
     const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
@@ -169,12 +174,12 @@ if(filterIndex<trigEvent->sizeFilters()){
    /*for(TrackCollection::const_iterator itTrack = tracks->begin();
        itTrack != tracks->end();                      
        ++itTrack) {*/
-      
+    
   for(size_t i = 0; i < genParticles->size(); ++ i) {
      const GenParticle & p = (*genParticles)[i];
-      
-      bool check = true;
     
+      bool check = true;
+      int pairCount = 0;
     // Trigger object loop starts
 		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
 			if (primeraVuelta && keyIt == trigKeys.begin()){filterCount ++;}
@@ -182,24 +187,31 @@ if(filterIndex<trigEvent->sizeFilters()){
 			double dEta2 =pow( p.eta()-obj.eta(),2); 
 			double dPhi2 =pow( p.phi()-obj.phi(),2);
 			double dR = sqrt(dPhi2+dEta2);
-			if((dR<0.1)&&(abs(p.pt() - obj.pt()) < 3)){
-				
+			if((dR<0.1)/*&&(abs(p.pt() - obj.pt()) < 3)*/){
+				pairCount ++;
 				if (check){
 				matchCount++;}
 				check = false;
 				matchCountRep++;
+				match ++;
+				if(abs(p.pdgId())== 13)
+				{muonMatches++;}
 				
 		}
     }
 primeraVuelta = false;
+
 }//end filter size check
       
   }
+  
       
       
       
       
    }
+   if (match == 2){correctMatches ++;}
+   
    
  int a = 0;
 if(filterIndex<trigEvent->sizeFilters()){ 
@@ -211,7 +223,7 @@ if(filterIndex<trigEvent->sizeFilters()){
       //do what you want with the trigger objects, you have
       //eta,phi,pt,mass,p,px,py,pz,et,energy accessors
       if(obj.pt() < 9999999){}
-      if(a==0){a = 1;
+      if(a==0){a = 0;
 		  filterCount2 ++;   }
     }
     
@@ -244,23 +256,52 @@ Analyzer1::beginJob()
 	filterCount=0;
 	triggerCount=0;
 	filterCount2=0;
+	muonCount = 0;
+	correctMatches = 0;
+	muonMatches=0;
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
 void 
 Analyzer1::endJob() 
-{
-	std::cout<<"Number of objects passing filter: "<<filterCount<<std::endl;
-	std::cout<<"Number of matches: "<<matchCount<<std::endl;
-	std::cout<<"Number of matches with rep: "<<matchCountRep<<std::endl;
+{   std::cout<<"Number of events that should activate trigger "<<muonCount<<std::endl;
 	std::cout<<"Number of times trigger was activated "<<triggerCount<<std::endl;
-	std::cout<<"this should be the same number as above "<<filterCount2<<std::endl;
+    std::cout<<"Number of muon matches "<<muonMatches<<std::endl;
+    std::cout<<"Number of matches: "<<matchCount<<std::endl;
+    std::cout<<"Number of matches with rep: "<<matchCountRep<<std::endl;
+	std::cout<<"Number of objects passing filter: "<<filterCount2<<std::endl;
+	std::cout<<"Number of correct matches" " <<correctMatches<<std::endl;
+	
+	
 	std::cout<<"Triger efficiency (with respecto to matching)"<<(float)matchCount/triggerCount<<std::endl;
     file->Write();
     file->Close(); 
 }
 
 // ------------ method called when starting to processes a run  ------------
+
+
+int
+Analyzer1::countMuons(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+{
+	using namespace edm;
+	using namespace reco;
+	int numMu = 0;
+	int triggeringEvent = 0;
+	Handle<GenParticleCollection> genParticles;
+iEvent.getByLabel("genParticles", genParticles);
+for(size_t i = 0; i < genParticles->size(); ++ i) {
+     const GenParticle & p = (*genParticles)[i];
+     if (abs(p.pdgId()) == 13 && p.pt() >= 30){
+	  numMu++;
+	 
+	 }
+	
+}
+ if(numMu ==2)
+ {triggeringEvent = 1;}
+ return triggeringEvent;
+}
 void 
 Analyzer1::beginRun(edm::Run const&, edm::EventSetup const&)
 {
