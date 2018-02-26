@@ -64,7 +64,7 @@ class Analyzer1 : public edm::EDAnalyzer {
       virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
       virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&);
       int countMuons(const edm::Event&, const edm::EventSetup&);
-      double dR(const trigger::TriggerObject& ,  const GenParticle &  )
+      double dR(const trigger::TriggerObject& ,  const reco::GenParticle &  );
       // Add a Root TFiel and a Histogram
       
      TFile * file;
@@ -172,23 +172,14 @@ if(filterIndex<trigEvent->sizeFilters()){
     
   for(size_t i = 0; i < genParticles->size(); ++ i) {
      const GenParticle & p = (*genParticles)[i];
-    
-      bool check = true;
-      int pairCount = 0;
+     
     // Trigger object loop starts
 		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
 			if (primeraVuelta && keyIt == trigKeys.begin()){filterCount ++;}
 			const trigger::TriggerObject& obj = trigObjColl[*keyIt];
-			/*double dEta2 =pow( p.eta()-obj.eta(),2); 
-			double dPhi2 =pow( p.phi()-obj.phi(),2);
-			double dR = sqrt(dPhi2+dEta2);*/
-			if((dR(obj,p)<0.1)/*&&(abs(p.pt() - obj.pt()) < 3)*/){
-				pairCount ++;
-				if (check){
-				matchCount++;}
-				check = false;
-				matchCountRep++;
-				
+			
+			if((dR(obj,p)<0.1)){
+				matchCount++;
 				if(abs(p.pdgId())== 13)
 				{muonMatches++;
 				 match++;	 }
@@ -208,29 +199,9 @@ primeraVuelta = false;
    }
    if (match >= 2){correctMatches ++;}
    
-   int temp =0;
 
-if(filterIndex<trigEvent->sizeFilters()){ 
-    const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
-    const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
-    //now loop of the trigger objects passing filter
-    
-     for(size_t i = 0; i < genParticles->size(); ++ i) {
-     const GenParticle & p = (*genParticles)[i];
-     if(abs(p.pdgId())==13){
-     temp ++;}
-     filterCount2 ++;
-    for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
-      const trigger::TriggerObject& obj = trigObjColl[*keyIt];
-      //do what you want with the trigger objects, you have
-      //eta,phi,pt,mass,p,px,py,pz,et,energy accessors
-      if(obj.pt() + p.pt()< 999999999){}
-    
-		     
-    }
-}
-    std::cout<<temp<<std::endl;
-}//end filter size check
+
+
 
 #ifdef THIS_IS_AN_EVENT_EXAMPLE
    Handle<ExampleData> pIn;
@@ -271,12 +242,13 @@ Analyzer1::endJob()
 	std::cout<<"Number of times trigger was activated "<<triggerCount<<std::endl;
     std::cout<<"Number of muon matches "<<muonMatches<<std::endl;
     std::cout<<"Number of matches: "<<matchCount<<std::endl;
-    std::cout<<"Number of matches with rep: "<<matchCountRep<<std::endl;
-	std::cout<<"Number of objects passing filter: "<<filterCount2<<std::endl;
 	std::cout<<"Number of correct matches"  <<correctMatches<<std::endl;
+	std::cout<<"Trigger efficiency 1 (times it should have been activated / times it was activated)"<< (float)muonCount/triggerCount<<std::endl;
+	std::cout<<"Trigger efficiency 2 (times it was activated / times it was activated by two muons)"<< (float)triggerCount/correctMatches<<std::endl;
 	
 	
-	std::cout<<"Triger efficiency (with respecto to matching)"<<(float)matchCount/triggerCount<<std::endl;
+	
+	
     file->Write();
     file->Close(); 
 }
@@ -284,7 +256,7 @@ Analyzer1::endJob()
 // ------------ method called when starting to processes a run  ------------
 
 double
-Analyzer1::dR(const trigger::TriggerObject& obj,  const GenParticle & p )
+Analyzer1::dR(const trigger::TriggerObject& obj,  const reco::GenParticle & p )
 {
 	        double dEta2 =pow( p.eta()-obj.eta(),2); 
 			double dPhi2 =pow( p.phi()-obj.phi(),2);
