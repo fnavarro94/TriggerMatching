@@ -41,6 +41,7 @@
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 //
 // class declaration
 //
@@ -114,6 +115,7 @@ void
 Analyzer1::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
+   using namespace reco;
    
 // Trigger activiation count
 
@@ -123,7 +125,9 @@ edm::InputTag trigResultsTag("TriggerResults","","HLT"); //make sure have correc
 iEvent.getByLabel(trigResultsTag,trigResults);
 const edm::TriggerNames& trigNames = iEvent.triggerNames(*trigResults);   
 
-std::string pathName="HLT_DoublePhoton33_v2";
+//std::string pathName="HLT_DoublePhoton33_v2"; //data
+std::string pathName="HLT_L2DoubleMu30_NoVertex_v5";  // simulation
+
 
 bool passTrig=trigResults->accept(trigNames.triggerIndex(pathName)); 
 
@@ -141,15 +145,18 @@ InputTag trigEventTag("hltTriggerSummaryAOD","","HLT"); //make sure have correct
 Handle<trigger::TriggerEvent> trigEvent; 
 iEvent.getByLabel(trigEventTag,trigEvent);
 
+Handle<GenParticleCollection> genParticles;
+iEvent.getByLabel("genParticles", genParticles);
+   
 
+//std::string filterName("hltDoublePhoton33EgammaLHEDoubleFilter"); // data
+std::string filterName("hltL2DoubleMu30NoVertexL2PreFiltered"); // simulation 
 
-std::string filterName("hltDoublePhoton33EgammaLHEDoubleFilter"); 
-//std::string filterName("hltDoublePhoton33EgammaR9ShapeDoubleFilter"); 
 
 //it is important to specify the right HLT process for the filter, not doing this is a common bug
 trigger::size_type filterIndex = trigEvent->filterIndex(edm::InputTag(filterName,"",trigEventTag.process())); 
 bool primeraVuelta = true;
-if(passTrig){
+if(true){
 if(filterIndex<trigEvent->sizeFilters()){ 
     const trigger::Keys& trigKeys = trigEvent->filterKeys(filterIndex); 
     const trigger::TriggerObjectCollection & trigObjColl(trigEvent->getObjects());
@@ -159,12 +166,12 @@ if(filterIndex<trigEvent->sizeFilters()){
 
    Handle<TrackCollection> tracks;
    iEvent.getByLabel(trackTags_,tracks);
-   for(TrackCollection::const_iterator itTrack = tracks->begin();
+   /*for(TrackCollection::const_iterator itTrack = tracks->begin();
        itTrack != tracks->end();                      
-       ++itTrack) {
+       ++itTrack) {*/
       
-  
-     
+  for(size_t i = 0; i < genParticles->size(); ++ i) {
+     const GenParticle & p = (*genParticles)[i];
       
       bool check = true;
     
@@ -172,10 +179,10 @@ if(filterIndex<trigEvent->sizeFilters()){
 		for(trigger::Keys::const_iterator keyIt=trigKeys.begin();keyIt!=trigKeys.end();++keyIt){ 
 			if (primeraVuelta && keyIt == trigKeys.begin()){filterCount ++;}
 			const trigger::TriggerObject& obj = trigObjColl[*keyIt];
-			double dEta2 =pow( itTrack->eta()-obj.eta(),2); 
-			double dPhi2 =pow( itTrack->phi()-obj.phi(),2);
+			double dEta2 =pow( p.eta()-obj.eta(),2); 
+			double dPhi2 =pow( p.phi()-obj.phi(),2);
 			double dR = sqrt(dPhi2+dEta2);
-			if((dR<0.1)&&(abs(itTrack->pt() - obj.pt()) < 3)){
+			if((dR<0.1)&&(abs(p.pt() - obj.pt()) < 3)){
 				
 				if (check){
 				matchCount++;}
